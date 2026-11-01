@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IA na Investigação Forense Digital</title>
+<style>
+  :root{
+    --ink:#10151c;
+    --ink-2:#161d26;
+    --paper:#eae6da;
+    --paper-dim:#c9c3b2;
+    --amber:#e2a13d;
+    --amber-dim:#8a6a2f;
+    --teal:#5aa9a3;
+    --line: rgba(234,230,218,0.14);
+    --serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --mono: 'JetBrains Mono', 'Courier New', monospace;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  @font-face{font-family:'Source Serif 4';src:local('Georgia');}
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--ink);
+    color:var(--paper);
+    font-family:var(--sans);
+    line-height:1.6;
+  }
+  a{color:var(--amber);text-decoration:none;}
+
+  /* ===== layout ===== */
+  .shell{
+    display:grid;
+    grid-template-columns: 260px 1fr;
+    min-height:100vh;
+  }
+  @media (max-width: 900px){
+    .shell{grid-template-columns: 1fr;}
+    .sidebar{position:relative; height:auto; border-right:none; border-bottom:1px solid var(--line);}
+  }
+
+  /* ===== sidebar ===== */
+  .sidebar{
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    border-right:1px solid var(--line);
+    padding:28px 22px;
+    background:var(--ink-2);
+  }
+  @media (max-width: 900px){ .sidebar{position:static; height:auto;} }
+  .case-tag{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:0.06em;
+    color:var(--amber-dim);
+    border:1px solid var(--amber-dim);
+    display:inline-block;
+    padding:3px 8px;
+    border-radius:2px;
+    margin-bottom:18px;
+  }
+  .sidebar h1{
+    font-family:var(--serif);
+    font-size:1.35rem;
+    line-height:1.25;
+    margin:0 0 6px;
+    font-weight:600;
+  }
+  .sidebar .author{
+    font-size:0.82rem;
+    color:var(--paper-dim);
+    margin-bottom:26px;
+  }
+  nav.toc{margin-top:8px;}
+  nav.toc .group-label{
+    font-family:var(--mono);
+    font-size:10.5px;
+    color:var(--paper-dim);
+    margin:20px 0 8px;
+    letter-spacing:0.03em;
+  }
+  nav.toc a{
+    display:block;
+    color:var(--paper-dim);
+    font-size:0.86rem;
+    padding:5px 0 5px 14px;
+    border-left:2px solid transparent;
+    transition:border-color .15s, color .15s, padding-left .15s;
+  }
+  nav.toc a.sub{
+    font-size:0.78rem;
+    padding-left:26px;
+  }
+  nav.toc a:hover{color:var(--paper); border-left-color:var(--paper-dim);}
+  nav.toc a.active{color:var(--amber); border-left-color:var(--amber); padding-left:18px;}
+
+  /* ===== main ===== */
+  main{padding: 0; max-width: 900px;}
+
+  .cover{
+    min-height:100vh;
+    display:grid;
+    grid-template-columns: 1.1fr 1fr;
+    align-items:center;
+    gap:40px;
+    padding:60px 56px;
+    border-bottom:1px solid var(--line);
+    position:relative;
+    overflow:hidden;
+  }
+  .cover::before{
+    content:'';
+    position:absolute; inset:0;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 42px 42px;
+    opacity:0.35;
+    pointer-events:none;
+  }
+  .cover-text{position:relative; z-index:1;}
+  .cover-text .case-tag{margin-bottom:22px;}
+  .cover-text h2{
+    font-family:var(--serif);
+    font-size:2.9rem;
+    line-height:1.12;
+    font-weight:600;
+    margin:0 0 22px;
+  }
+  .cover-text p{
+    font-size:1.02rem;
+    opacity:0.85;
+    max-width:480px;
+  }
+  .cover-cta{
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    margin-top:28px;
+    font-family:var(--mono);
+    font-size:12.5px;
+    color:var(--amber);
+    border:1px solid var(--amber-dim);
+    padding:11px 18px;
+    border-radius:2px;
+    cursor:pointer;
+    background:transparent;
+    transition:background .15s, color .15s;
+  }
+  .cover-cta:hover{background:var(--amber); color:var(--ink);}
+  .cover-art{
+    position:relative; z-index:1;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .cover-art svg{width:100%; max-width:420px; height:auto;}
+  @media (max-width: 900px){
+    .cover{grid-template-columns:1fr; padding:70px 26px 40px; min-height:auto;}
+    .cover-art{order:-1; margin-bottom:10px;}
+    .cover-art svg{max-width:280px;}
+    .cover-text h2{font-size:2.1rem;}
+  }
+
+  .hero{
+    padding:90px 56px 70px;
+    border-bottom:1px solid var(--line);
+    position:relative;
+  }
+  .hero .kicker{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--teal);
+    letter-spacing:0.04em;
+    margin-bottom:22px;
+  }
+  .hero h2{
+    font-family:var(--serif);
+    font-size:2.6rem;
+    line-height:1.15;
+    max-width:680px;
+    margin:0 0 28px;
+    font-weight:600;
+  }
+  .hero p.lede{
+    font-size:1.05rem;
+    color:var(--paper);
+    opacity:0.86;
+    max-width:600px;
+    margin-bottom:0;
+  }
+  .hero .meta-row{
+    display:flex; gap:28px; margin-top:40px; flex-wrap:wrap;
+    font-family:var(--mono); font-size:12px; color:var(--paper-dim);
+  }
+  .hero .meta-row div span{display:block; color:var(--amber); margin-top:3px; font-size:13px;}
+
+  section{
+    padding:64px 56px;
+    border-bottom:1px solid var(--line);
+  }
+  @media (max-width: 700px){
+    .hero{padding:60px 26px 46px;}
+    section{padding:44px 26px;}
+    .hero h2{font-size:1.9rem;}
+  }
+  .sec-head{
+    display:flex; align-items:baseline; gap:14px; margin-bottom:8px;
+  }
+  .sec-num{
+    font-family:var(--mono);
+    color:var(--amber-dim);
+    font-size:0.95rem;
+  }
+  h3.sec-title{
+    font-family:var(--serif);
+    font-size:1.7rem;
+    margin:0;
+    font-weight:600;
+  }
+  .sec-sub{
+    color:var(--paper-dim);
+    font-size:0.92rem;
+    margin:0 0 30px;
+    max-width:560px;
+  }
+  h4.sub-title{
+    font-family:var(--serif);
+    font-size:1.2rem;
+    margin:38px 0 12px;
+    font-weight:600;
+    color:var(--paper);
+  }
+  p{
+    max-width:680px;
+    font-size:0.98rem;
+    color:var(--paper);
+    opacity:0.92;
+    margin:0 0 18px;
+  }
+  .callout{
+    border-left:2px solid var(--amber);
+    padding:6px 0 6px 20px;
+    margin:26px 0 30px;
+    max-width:640px;
+    font-family:var(--serif);
+    font-size:1.1rem;
+    font-style:italic;
+    color:var(--amber);
+    opacity:0.95;
+  }
+  .cite{
+    font-family:var(--mono);
+    font-size:0.78rem;
+    color:var(--teal);
+  }
+
+  .icon-sm{width:34px; height:34px; margin-bottom:12px; display:block;}
+  .icon-sm svg{width:100%; height:100%;}
+  .sec-icon{width:44px; height:44px; margin-bottom:6px; display:block;}
+  .sec-icon svg{width:100%; height:100%;}
+
+
+  /* waves grid */
+  .waves{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:1px;
+    background:var(--line);
+    margin:30px 0 12px;
+    border:1px solid var(--line);
+  }
+  @media (max-width:800px){ .waves{grid-template-columns:1fr 1fr;} }
+  .wave-card{
+    background:var(--ink-2);
+    padding:22px 18px;
+  }
+  .wave-card .n{
+    font-family:var(--mono); font-size:11px; color:var(--amber-dim); margin-bottom:10px;
+  }
+  .wave-card h5{
+    font-family:var(--serif); font-size:1.05rem; margin:0 0 10px; font-weight:600;
+  }
+  .wave-card p{font-size:0.85rem; margin:0; max-width:none; opacity:0.82;}
+
+  /* language grid */
+  .lang-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:14px;
+    margin:26px 0 10px;
+  }
+  @media (max-width:800px){ .lang-grid{grid-template-columns:1fr 1fr;} }
+  @media (max-width:520px){ .lang-grid{grid-template-columns:1fr;} }
+  .lang-card{
+    border:1px solid var(--line);
+    padding:18px 16px;
+    background:var(--ink-2);
+  }
+  .lang-card .tag{
+    font-family:var(--mono); font-size:11px; color:var(--teal); margin-bottom:8px;
+  }
+  .lang-card h5{
+    font-family:var(--serif); font-weight:600; font-size:1.05rem; margin:0 0 8px;
+  }
+  .lang-card p{font-size:0.83rem; opacity:0.82; margin:0;}
+
+  /* timeline for evolution */
+  .timeline{border-left:1px solid var(--line); margin:30px 0 10px 6px; padding-left:26px;}
+  .t-item{position:relative; margin-bottom:26px;}
+  .t-item::before{
+    content:''; position:absolute; left:-31px; top:4px;
+    width:9px; height:9px; border-radius:50%; background:var(--amber);
+  }
+  .t-item .t-label{font-family:var(--mono); font-size:11px; color:var(--paper-dim); margin-bottom:4px;}
+  .t-item p{margin:0; font-size:0.92rem;}
+
+  /* pending / status boxes */
+  .status-box{
+    border:1px dashed var(--paper-dim);
+    padding:24px 22px;
+    max-width:640px;
+    font-family:var(--mono);
+    font-size:0.82rem;
+    color:var(--paper-dim);
+    background:repeating-linear-gradient(135deg, rgba(234,230,218,0.02) 0 10px, transparent 10px 20px);
+  }
+  .status-box .stamp{color:var(--amber); font-weight:600; letter-spacing:0.03em;}
+
+  /* references */
+  .ref-list{max-width:760px;}
+  .ref-item{
+    display:grid;
+    grid-template-columns:26px 1fr;
+    gap:14px;
+    padding:14px 0;
+    border-bottom:1px solid var(--line);
+    font-size:0.85rem;
+  }
+  .ref-item:last-child{border-bottom:none;}
+  .ref-item .idx{font-family:var(--mono); color:var(--amber-dim);}
+  .ref-item .body b{color:var(--paper); font-weight:600;}
+  .ref-item .body{color:var(--paper-dim); opacity:0.92;}
+  .ref-item .body a{word-break:break-all;}
+
+  footer{
+    padding:40px 56px 60px;
+    font-family:var(--mono);
+    font-size:11.5px;
+    color:var(--paper-dim);
+  }
+
+  /* objectives list styling */
+  ul.obj-list{max-width:660px; padding-left:0; list-style:none; margin:20px 0;}
+  ul.obj-list li{
+    position:relative; padding-left:22px; margin-bottom:12px; font-size:0.95rem; opacity:0.9;
+  }
+  ul.obj-list li::before{
+    content:'—'; position:absolute; left:0; color:var(--amber-dim);
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <aside class="sidebar">
+    <div class="case-tag">GUIA INFORMATIVO</div>
+    <h1>IA na Investigação Forense Digital</h1>
+    <div class="author">Lucas Orquem Vargas<br>E.E.E.M. Profª. Maria Rocha · Santa Maria, RS · 2026</div>
+
+    <nav class="toc" id="toc">
+      <div class="group-label">NESTE GUIA</div>
+      <a href="#intro" data-target="intro">O desafio</a>
+      <a href="#ia" data-target="ia">O que é IA</a>
+      <a href="#ondas" data-target="ondas">As quatro ondas</a>
+      <a href="#evolucao" data-target="evolucao">Como a IA evoluiu</a>
+      <a href="#forense" data-target="forense">IA e perícia digital</a>
+      <a href="#crimes" data-target="crimes">Crimes cibernéticos</a>
+      <a href="#linguagens" data-target="linguagens">Linguagens de programação</a>
+      <a href="#conclusao" data-target="conclusao">Conclusão</a>
+      <a href="#referencias" data-target="referencias">Fontes</a>
+    </nav>
+  </aside>
+
+  <main>
+
+    <div class="cover" id="capa">
+      <div class="cover-text">
+        <div class="case-tag">GUIA INFORMATIVO</div>
+        <h2>IA na investigação<br>forense digital</h2>
+        <p>Um levantamento sobre como a Inteligência Artificial apoia a programação na identificação, automação e análise de evidências digitais em crimes cibernéticos.</p>
+        <a href="#intro" class="cover-cta">EXPLORAR O TEMA →</a>
+      </div>
+      <div class="cover-art">
+        <svg viewBox="0 0 420 460" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ilustração de uma impressão digital sobreposta a linhas de código, simbolizando perícia digital e inteligência artificial">
+          <defs>
+            <clipPath id="fpClip">
+              <circle cx="210" cy="200" r="150"/>
+            </clipPath>
+          </defs>
+
+          <!-- outer scan ring -->
+          <circle cx="210" cy="200" r="170" fill="none" stroke="#8a6a2f" stroke-width="1" opacity="0.5"/>
+          <circle cx="210" cy="200" r="150" fill="none" stroke="#5aa9a3" stroke-width="1" opacity="0.35"/>
+
+          <!-- fingerprint arcs -->
+          <g fill="none" stroke="#e2a13d" stroke-width="2.4" stroke-linecap="round" clip-path="url(#fpClip)">
+            <path d="M120,140 C170,90 250,90 300,140 C330,175 330,225 300,260" opacity="0.9"/>
+            <path d="M105,165 C150,110 270,110 315,165 C345,205 345,240 320,275" opacity="0.75"/>
+            <path d="M95,195 C140,135 280,135 325,195 C355,238 350,270 320,300" opacity="0.6"/>
+            <path d="M90,225 C130,165 290,165 330,225" opacity="0.45"/>
+            <path d="M100,255 C145,205 275,205 320,255" opacity="0.35"/>
+            <path d="M130,110 C175,80 245,80 290,110" opacity="0.5"/>
+            <path d="M115,285 C160,245 260,245 305,285" opacity="0.3"/>
+            <path d="M150,320 C180,300 240,300 270,320" opacity="0.25"/>
+          </g>
+
+          <!-- binary specks scattered around -->
+          <g font-family="monospace" font-size="10" fill="#eae6da" opacity="0.55">
+            <text x="30" y="60">01</text>
+            <text x="360" y="80">10</text>
+            <text x="20" y="380">11</text>
+            <text x="370" y="360">00</text>
+            <text x="45" y="230">1</text>
+            <text x="380" y="230">0</text>
+            <text x="200" y="30">01001</text>
+            <text x="150" y="440">10110</text>
+          </g>
+
+          <!-- crosshair / scan target -->
+          <g stroke="#eae6da" stroke-width="1" opacity="0.6">
+            <line x1="210" y1="20" x2="210" y2="45"/>
+            <line x1="210" y1="355" x2="210" y2="380"/>
+            <line x1="20" y1="200" x2="45" y2="200"/>
+            <line x1="375" y1="200" x2="400" y2="200"/>
+          </g>
+
+          <!-- small terminal cursor blink accent -->
+          <rect x="196" y="200" width="10" height="16" fill="#e2a13d" opacity="0.85"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="hero">
+      <div class="kicker">// guia informativo</div>
+      <h2>De que maneira a Inteligência Artificial pode auxiliar a programação na investigação forense digital de crimes cibernéticos?</h2>
+      <p class="lede">Um guia sobre como a IA apoia a programação na identificação, automação e análise de evidências digitais — da origem do conceito às linguagens usadas hoje na linha de frente da cibersegurança.</p>
+    </div>
+
+    <!-- 1 INTRODUÇÃO -->
+    <section id="intro">
+      <div class="sec-head"><h3 class="sec-title">O desafio</h3></div>
+      <p class="sec-sub">Por que a inteligência artificial e a perícia digital se encontram.</p>
+
+      <p>A digitalização acelerada da sociedade transformou a IA em uma tecnologia de propósito geral — comparável, em impacto histórico, à eletricidade. Desde 2022, com a popularização da IA generativa e do processamento de linguagem natural, a automação e a tomada de decisão baseada em dados se tornaram acessíveis. Mas o mesmo avanço que otimiza processos legítimos também abre espaço para novas modalidades de crimes cibernéticos.</p>
+
+      <p>O cibercrime se divide em duas frentes: <b>crimes próprios</b>, que atacam o sistema ou o dado em si, e <b>crimes impróprios</b>, em que o computador é apenas a ferramenta de um delito preexistente. Diante do volume massivo de logs gerados diariamente, a análise manual se torna lenta e falha — o que exige o uso estratégico de programação e algoritmos especializados.</p>
+
+      <div class="callout">"De que maneira a Inteligência Artificial pode auxiliar a programação no processo de identificação, automação e análise de evidências na investigação forense digital de crimes cibernéticos?"</div>
+
+      <h4 class="sub-title">O que buscamos entender</h4>
+      <ul class="obj-list">
+        <li>Investigar a evolução histórica da IA e suas diferentes ondas de aplicação na sociedade e nos negócios.</li>
+        <li>Compreender os conceitos fundamentais dos crimes cibernéticos e o papel das principais linguagens de programação na proteção de sistemas.</li>
+        <li>Discutir os parâmetros éticos e legais da atuação do perito digital, incluindo a LGPD e a cadeia de custódia digital.</li>
+      </ul>
+
+      <h4 class="sub-title">Por que isso importa</h4>
+      <p>Em um ambiente regulado internacionalmente pela Convenção de Budapeste, falhas humanas ou lentidão na coleta de provas podem comprometer a validade jurídica de um processo. Entender como a IA atua junto a scripts e ferramentas automatizadas oferece aos futuros técnicos uma visão atualizada das demandas do mercado de proteção de dados.</p>
+    </section>
+
+    <!-- 2 FUNDAMENTAÇÃO -->
+    <section id="fundamentacao">
+      <div class="sec-head"><h3 class="sec-title">Entendendo o tema</h3></div>
+      <p class="sec-sub">Da definição de inteligência artificial às linguagens usadas na linha de frente da cibersegurança.</p>
+
+      <div id="ia">
+        <h4 class="sub-title">O que é inteligência artificial</h4>
+        <p>O termo foi usado pela primeira vez em 1956 por John McCarthy, no Dartmouth Summer Research Project on Artificial Intelligence <span class="cite">(Russell; Norvig, 2013)</span>. Os primeiros sistemas eram baseados em regras fixas e conhecimento pré-definido, o que limitava sua adaptação a problemas complexos <span class="cite">(Rezende, 2003)</span>.</p>
+        <p>Hoje, a IA é entendida como um conjunto de tecnologias que permite que computadores aprendam, raciocinem e executem tarefas antes dependentes da inteligência humana <span class="cite">(Costa; Cozman, 2024)</span>. A partir de 2022, a IA generativa — fundamentada em arquiteturas como o GPT — passou a compreender e processar linguagem natural, simulando diálogos e refinando respostas continuamente <span class="cite">(Silva; Kampff, 2023; Clara, 2023)</span>.</p>
+      </div>
+
+      <div id="ondas">
+        <h4 class="sub-title">As quatro ondas da IA</h4>
+        <p>Kai-Fu Lee (2018) propõe quatro estágios de adoção e impacto da IA na economia e na sociedade — não tipos de algoritmo, mas fases de uso da mesma base tecnológica.</p>
+        <div class="waves">
+          <div class="wave-card">
+            <div class="icon-sm"><svg viewBox="0 0 32 32" fill="none" stroke="#e2a13d" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="9" r="3"/><circle cx="24" cy="9" r="3"/><circle cx="16" cy="24" r="3"/><line x1="10.5" y1="10.8" x2="13.5" y2="21.5"/><line x1="21.5" y1="10.8" x2="18.5" y2="21.5"/><line x1="11" y1="9" x2="21" y2="9"/></svg></div>
+            <div class="n">ONDA 01</div>
+            <h5>IA da Internet</h5>
+            <p>Algoritmos de recomendação alimentados pelo comportamento dos usuários. A IA "rotula" cliques para personalizar o que consumimos — o modelo do Google e do YouTube.</p>
+          </div>
+          <div class="wave-card">
+            <div class="icon-sm"><svg viewBox="0 0 32 32" fill="none" stroke="#e2a13d" stroke-width="1.6" stroke-linecap="round"><ellipse cx="16" cy="8" rx="10" ry="3.4"/><path d="M6,8 L6,24 C6,25.9 10.5,27.4 16,27.4 C21.5,27.4 26,25.9 26,24 L26,8"/><path d="M6,16 C6,17.9 10.5,19.4 16,19.4 C21.5,19.4 26,17.9 26,16"/></svg></div>
+            <div class="n">ONDA 02</div>
+            <h5>IA de Negócios</h5>
+            <p>Usa dados estruturados e privados de bancos, hospitais e seguradoras para encontrar padrões imperceptíveis e apoiar decisões automatizadas.</p>
+          </div>
+          <div class="wave-card">
+            <div class="icon-sm"><svg viewBox="0 0 32 32" fill="none" stroke="#e2a13d" stroke-width="1.6" stroke-linecap="round"><path d="M2,16 C6,8 12,5 16,5 C20,5 26,8 30,16 C26,24 20,27 16,27 C12,27 6,24 2,16 Z"/><circle cx="16" cy="16" r="4.5"/></svg></div>
+            <div class="n">ONDA 03</div>
+            <h5>IA de Percepção</h5>
+            <p>Máquinas ganham visão e audição: reconhecem rostos, entendem fala e digitalizam o mundo físico — assistentes de voz, lojas autônomas.</p>
+          </div>
+          <div class="wave-card">
+            <div class="icon-sm"><svg viewBox="0 0 32 32" fill="none" stroke="#e2a13d" stroke-width="1.6" stroke-linecap="round"><rect x="11" y="13" width="10" height="6" rx="1.5"/><line x1="8" y1="9" x2="11" y2="13"/><line x1="24" y1="9" x2="21" y2="13"/><line x1="8" y1="23" x2="11" y2="19"/><line x1="24" y1="23" x2="21" y2="19"/><circle cx="7" cy="8" r="2.4"/><circle cx="25" cy="8" r="2.4"/><circle cx="7" cy="24" r="2.4"/><circle cx="25" cy="24" r="2.4"/></svg></div>
+            <div class="n">ONDA 04</div>
+            <h5>IA Autônoma</h5>
+            <p>Integra percepção com locomoção e ação física — veículos autônomos, drones de entrega, robôs industriais.</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="evolucao">
+        <h4 class="sub-title">Como a IA evoluiu</h4>
+        <p>Enquanto Kai-Fu Lee descreve as aplicações práticas da IA, Andrew Ng — em <i>AI is the New Electricity</i> (2016) — explica os fundamentos científicos por trás dessa evolução: a IA moderna, sobretudo baseada em Deep Learning, é uma tecnologia de propósito geral, comparável ao impacto histórico da eletricidade.</p>
+        <div class="timeline">
+          <div class="t-item">
+            <div class="t-label">CÍRCULO VIRTUOSO</div>
+            <p>Grandes volumes de dados alimentam continuamente os algoritmos, tornando-os progressivamente mais precisos — a base da IA da Internet e de Negócios <span class="cite">(Ng, 2016)</span>.</p>
+          </div>
+          <div class="t-item">
+            <div class="t-label">VISÃO E LINGUAGEM</div>
+            <p>Avanços em visão computacional e processamento de linguagem natural consolidam a IA de Percepção, aproximando o mundo digital do físico.</p>
+          </div>
+          <div class="t-item">
+            <div class="t-label">APRENDIZADO POR REFORÇO</div>
+            <p>A combinação entre percepção e aprendizado por reforço permite que sistemas tomem decisões e ajam de forma independente — o estágio da IA Autônoma.</p>
+          </div>
+          <div class="t-item">
+            <div class="t-label">APLICAÇÃO EM PERÍCIA</div>
+            <p>Essa evolução amplia o uso da computação em áreas que exigem processar grandes volumes de dados — entre elas, a investigação forense digital <span class="cite">(Dalla Vecchia, 2024)</span>.</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="forense">
+        <div class="sec-icon"><svg viewBox="0 0 32 32" fill="none" stroke="#e2a13d" stroke-width="1.6" stroke-linecap="round"><circle cx="14" cy="14" r="9"/><line x1="20.5" y1="20.5" x2="28" y2="28"/><line x1="10" y1="14" x2="18" y2="14"/><line x1="14" y1="10" x2="14" y2="18"/></svg></div>
+        <h4 class="sub-title">IA e programação na perícia digital</h4>
+        <p>A investigação forense digital é o processo científico de identificar, preservar, analisar e apresentar evidências digitais de forma legal, em computadores, celulares e nuvem — revelando o que aconteceu, como aconteceu e quem cometeu o crime <span class="cite">(Macedo, 2010)</span>. A perícia segue etapas de identificação, preservação, análise e apresentação de evidências.</p>
+        <p>A programação entra pela eficiência: em vez de repetir manualmente uma tarefa lenta, cria-se um código que a automatiza — o que economiza dias de trabalho humano em segundos de processamento <span class="cite">(Baptista; Baptista, 2023)</span>. Algoritmos especializados aprimoram a identificação de padrões, localizando falhas em grandes conjuntos de dados que seriam difíceis de detectar a olho humano. Ao sugerir otimizações e detectar anomalias de forma sistemática, a programação eleva a exatidão técnica da análise e reduz erros operacionais <span class="cite">(Macedo, 2010)</span>.</p>
+      </div>
+
+      <div id="crimes">
+        <div class="sec-icon"><svg viewBox="0 0 32 32" fill="none" stroke="#e2a13d" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="14" width="18" height="14" rx="1.5"/><path d="M11,14 L11,9 C11,5.7 13.2,3 16,3 C18.8,3 21,5.7 21,9 L21,14"/><circle cx="16" cy="20" r="2" fill="#e2a13d" stroke="none"/></svg></div>
+        <h4 class="sub-title">Crimes cibernéticos</h4>
+        <p>Crime cibernético é qualquer ação ilícita que usa a tecnologia da informação como meio ou como objetivo final <span class="cite">(Pinheiro, 2022)</span>. A literatura os divide em duas categorias:</p>
+        <div class="lang-grid" style="grid-template-columns:1fr 1fr;">
+          <div class="lang-card">
+            <div class="tag">CRIMES PRÓPRIOS</div>
+            <h5>O sistema é o alvo</h5>
+            <p>Ataques diretos ao dado ou ao sistema, como invasão de servidores e bloqueio de sistemas <span class="cite">(Pinheiro, 2022)</span>.</p>
+          </div>
+          <div class="lang-card">
+            <div class="tag">CRIMES IMPRÓPRIOS</div>
+            <h5>O computador é a ferramenta</h5>
+            <p>Delitos que já existiam fora do digital, como phishing e fraudes financeiras <span class="cite">(Peck, 2021)</span>.</p>
+          </div>
+        </div>
+        <p style="margin-top:24px;">No plano internacional, a referência é a Convenção de Budapeste, oficializada no Brasil pelo Decreto nº 11.491/2023, que define normas globais contra acesso não autorizado, fraude de dados e violação de direitos autorais. Silva, Oliveira e Santos (2024) alertam que muitos ataques exploram falhas comuns de programação — como SQL Injection e Cross-Site Scripting (XSS) — pontos em que a IA auxilia o desenvolvedor a identificar e corrigir brechas antes do lançamento do sistema.</p>
+      </div>
+
+      <div id="linguagens">
+        <h4 class="sub-title">Linguagens de programação na cibersegurança</h4>
+        <p>A escolha da linguagem está diretamente relacionada ao tipo de atividade de segurança realizada <span class="cite">(Doddi, 2025)</span>.</p>
+        <div class="lang-grid">
+          <div class="lang-card">
+            <div class="icon-sm"><svg viewBox="0 0 32 32" fill="none" stroke="#5aa9a3" stroke-width="1.6" stroke-linecap="round"><path d="M9,4 L23,4 L23,28 L9,28 Z" opacity="0.5"/><line x1="12.5" y1="10" x2="19.5" y2="10"/><line x1="12.5" y1="15" x2="19.5" y2="15"/><line x1="12.5" y1="20" x2="16.5" y2="20"/></svg></div>
+            <div class="tag">AUTOMAÇÃO</div>
+            <h5>Python</h5>
+            <p>Automação de testes, scripts de análise de tráfego e detecção de anomalias. O framework Scapy exemplifica sua flexibilidade com pacotes de rede <span class="cite">(Damasceno; Rocha; Souto, 2023)</span>.</p>
+          </div>
+          <div class="lang-card">
+            <div class="icon-sm"><svg viewBox="0 0 32 32" fill="none" stroke="#5aa9a3" stroke-width="1.6" stroke-linecap="round"><rect x="9" y="9" width="14" height="14" rx="1.5"/><line x1="12" y1="4" x2="12" y2="9"/><line x1="20" y1="4" x2="20" y2="9"/><line x1="12" y1="23" x2="12" y2="28"/><line x1="20" y1="23" x2="20" y2="28"/><line x1="4" y1="12" x2="9" y2="12"/><line x1="4" y1="20" x2="9" y2="20"/><line x1="23" y1="12" x2="28" y2="12"/><line x1="23" y1="20" x2="28" y2="20"/></svg></div>
+            <div class="tag">BAIXO NÍVEL</div>
+            <h5>C e C++</h5>
+            <p>Essenciais para engenharia reversa de malwares e diagnóstico de falhas de memória críticas, como buffer overflow <span class="cite">(Zomer; Hoffmann; Griebler, 2024)</span>.</p>
+          </div>
+          <div class="lang-card">
+            <div class="icon-sm"><svg viewBox="0 0 32 32" fill="none" stroke="#5aa9a3" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M16,4 L26,8 L26,17 C26,23 21,27 16,29 C11,27 6,23 6,17 L6,8 Z"/><path d="M12,16 L16,20 L21,13"/></svg></div>
+            <div class="tag">SEGURANÇA DE MEMÓRIA</div>
+            <h5>Rust</h5>
+            <p>Elimina nativamente falhas comuns de C/C++, permitindo ferramentas de análise maiores e menos vulneráveis a exploração.</p>
+          </div>
+          <div class="lang-card">
+            <div class="icon-sm"><svg viewBox="0 0 32 32" fill="none" stroke="#5aa9a3" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="24" height="18" rx="1.5"/><path d="M9,13 L13,16 L9,19"/><line x1="16" y1="19" x2="21" y2="19"/></svg></div>
+            <div class="tag">INFRAESTRUTURA</div>
+            <h5>Bash e PowerShell</h5>
+            <p>Automação de varreduras, filtragem de logs e configuração de ambientes de teste de invasão em Linux e Windows <span class="cite">(Petry; Fraga, 2024)</span>.</p>
+          </div>
+          <div class="lang-card">
+            <div class="icon-sm"><svg viewBox="0 0 32 32" fill="none" stroke="#5aa9a3" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18,3 L9,18 L15,18 L13,29 L24,14 L17,14 Z"/></svg></div>
+            <div class="tag">CONCORRÊNCIA</div>
+            <h5>Go</h5>
+            <p>Eficiência em concorrência e execução rápida — escolha preferencial para scanners de rede e frameworks de detecção em larga escala.</p>
+          </div>
+          <div class="lang-card">
+            <div class="icon-sm"><svg viewBox="0 0 32 32" fill="none" stroke="#5aa9a3" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="24" height="20" rx="1.5"/><line x1="4" y1="11" x2="28" y2="11"/><circle cx="8" cy="8.5" r="0.9" fill="#5aa9a3" stroke="none"/><circle cx="11" cy="8.5" r="0.9" fill="#5aa9a3" stroke="none"/></svg></div>
+            <div class="tag">CAMADA DE APLICAÇÃO</div>
+            <h5>JavaScript</h5>
+            <p>Espinha dorsal da web moderna; central para mitigar XSS, manipular o DOM em testes de intrusão e construir dashboards de segurança.</p>
+          </div>
+        </div>
+        <p style="margin-top:26px;">Dessa forma, a escolha da linguagem de programação está diretamente relacionada ao tipo de atividade de segurança a ser realizada. Python se destaca pela automação e análise; C e C++ permanecem relevantes para atividades de baixo nível e engenharia reversa; Rust avança na segurança de memória; e Bash, PowerShell e Go contribuem para a automação e administração de ambientes <span class="cite">(Souza; Silva; Dias, 2000)</span>. Já o JavaScript tem papel fundamental na análise e proteção de aplicações web.</p>
+        <p>Portanto, o domínio de diferentes linguagens amplia a capacidade dos profissionais de identificar vulnerabilidades, desenvolver mecanismos de proteção e responder a incidentes de segurança.</p>
+      </div>
+    </section>
+
+    <!-- 4 CONCLUSÃO -->
+    <section id="conclusao">
+      <div class="sec-head"><h3 class="sec-title">Conclusão</h3></div>
+      <p class="sec-sub">O que o estudo mostra sobre IA, programação e perícia digital.</p>
+      <p>A pergunta que guiou este trabalho foi de que maneira a Inteligência Artificial pode auxiliar a programação na identificação, automação e análise de evidências na investigação forense digital. Ao longo do estudo, ficou claro que a IA deixou de ser uma promessa distante: tornou-se uma tecnologia de propósito geral que, desde 2022, com a IA generativa, está ao alcance de qualquer profissional.</p>
+      <p>Na perícia, o ganho principal está na escala e na precisão. Logs e dados digitais surgem em volume impossível de ler manualmente; programar a tarefa transforma dias de leitura em segundos de processamento, e algoritmos especializados localizam padrões e anomalias que escapariam ao olho humano. A IA amplia esse efeito ao ajudar a identificar falhas comuns, como SQL Injection e XSS, antes que o sistema seja lançado.</p>
+      <p>Também ficou evidente que não existe uma linguagem única para tudo: Python para automação e análise, C e C++ para baixo nível e engenharia reversa, Rust para segurança de memória, Bash, PowerShell e Go para administração e varreduras em larga escala, e JavaScript para a camada web. Dominar várias delas amplia a capacidade de identificar vulnerabilidades e responder a incidentes.</p>
+      <div class="callout">A tecnologia acelera a investigação, mas a validade de uma prova continua dependendo de método, rigor e do respeito às regras legais.</div>
+    </section>
+
+    <!-- REFERÊNCIAS -->
+    <section id="referencias">
+      <div class="sec-head"><h3 class="sec-title">Fontes</h3></div>
+      <p class="sec-sub">Obras e artigos consultados, em ordem alfabética.</p>
+      <div class="ref-list">
+        <div class="ref-item"><div class="idx">01</div><div class="body"><b>ALMEIDA, Jéssica et al.</b> Universidade Tiradentes, Aracaju, 2015.</div></div>
+        <div class="ref-item"><div class="idx">02</div><div class="body"><b>BADMAN, Annie; FORREST, Amber.</b> IBM Think, fev. 2024.</div></div>
+        <div class="ref-item"><div class="idx">03</div><div class="body"><b>BAPTISTA, J. F. S.; BAPTISTA, M. R. S.</b> O que a IA pode fazer para auxiliar os programadores? TCC, Faculdade de Tecnologia de Assis, 2023.</div></div>
+        <div class="ref-item"><div class="idx">04</div><div class="body"><b>BRASIL.</b> Decreto nº 11.491, de 12 de abril de 2023 — Convenção sobre o Crime Cibernético (Budapeste, 2001).</div></div>
+        <div class="ref-item"><div class="idx">05</div><div class="body"><b>COSTA, A. H. R.; COZMAN, F. G.</b> O futuro da pesquisa em inteligência artificial. Revista USP, n. 141, 2024.</div></div>
+        <div class="ref-item"><div class="idx">06</div><div class="body"><b>CRAWFORD, Kate.</b> Atlas da IA: poder, política e os custos planetários da inteligência artificial. Edições SESC, 2025.</div></div>
+        <div class="ref-item"><div class="idx">07</div><div class="body"><b>DALLA VECCHIA, Evandro.</b> Perícia digital: da investigação à análise forense. 3. ed. Millennium Editora, 2024.</div></div>
+        <div class="ref-item"><div class="idx">08</div><div class="body"><b>DODDI, Rafael.</b> Virtual Works Cybersecurity, fev. 2025.</div></div>
+        <div class="ref-item"><div class="idx">09</div><div class="body"><b>KARA, S. et al.</b> AI-Powered Vulnerability Detection and Patch Management in Cybersecurity. Applied Sciences, v. 8, n. 1, 2026.</div></div>
+        <div class="ref-item"><div class="idx">10</div><div class="body"><b>LEE, Kai-Fu.</b> As Superpotências da Inteligência Artificial. Relógio D'Água, 2018.</div></div>
+        <div class="ref-item"><div class="idx">11</div><div class="body"><b>MACEDO, Guilherme.</b> Universidade Federal do Rio Grande do Sul, Porto Alegre, 2010.</div></div>
+        <div class="ref-item"><div class="idx">12</div><div class="body"><b>NG, Andrew.</b> AI is the New Electricity, 2016; What Artificial Intelligence Can and Can't Do Right Now. Harvard Business Review, 2016.</div></div>
+        <div class="ref-item"><div class="idx">13</div><div class="body"><b>PINHEIRO, Patricia Peck.</b> Direito Digital. 7. ed. SaraivaJud, 2022.</div></div>
+        <div class="ref-item"><div class="idx">14</div><div class="body"><b>REZENDE, Solange Oliveira (org.).</b> Sistemas inteligentes: fundamentos e aplicações. Manole, 2003.</div></div>
+        <div class="ref-item"><div class="idx">15</div><div class="body"><b>RIBEIRO, Alexandre et al.</b> A inteligência artificial generativa como ferramenta educativa. Tecnologias, Sociedade e Conhecimento, v. 10, n. 2, 2023.</div></div>
+        <div class="ref-item"><div class="idx">16</div><div class="body"><b>RUSSELL, Stuart; NORVIG, Peter.</b> Inteligência artificial. 3. ed. Elsevier, 2013.</div></div>
+        <div class="ref-item"><div class="idx">17</div><div class="body"><b>SILVA, D. S.; KAMPFF, A. J. C.</b> A inteligência artificial generativa como ferramenta educativa. Tecnologias, Sociedade e Conhecimento, v. 10, n. 2, 2023.</div></div>
+        <div class="ref-item"><div class="idx">18</div><div class="body"><b>SILVA, R.; OLIVEIRA, M.; SANTOS, F.</b> Inteligência artificial aplicada à segurança no desenvolvimento de software: detecção automatizada de vulnerabilidades. Revista Brasileira de Computação Aplicada, v. 16, n. 1, 2024.</div></div>
+      </div>
+    </section>
+
+    <footer>
+      BASEADO NO TCC DE LUCAS ORQUEM VARGAS · E.E.E.M. PROFª. MARIA ROCHA · SANTA MARIA, RS, 2026
+    </footer>
+
+  </main>
+</div>
+
+<script>
+  const links = document.querySelectorAll('#toc a');
+  const targets = Array.from(links).map(l => document.getElementById(l.dataset.target)).filter(Boolean);
+
+  function onScroll(){
+    let current = targets[0];
+    const scrollPos = window.scrollY + 140;
+    for(const t of targets){
+      if(t.offsetTop <= scrollPos) current = t;
+    }
+    links.forEach(l => l.classList.toggle('active', l.dataset.target === current.id));
+  }
+  window.addEventListener('scroll', onScroll);
+  onScroll();
+</script>
+
+</body>
+</html>
